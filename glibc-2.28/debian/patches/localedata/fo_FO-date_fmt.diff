@@ -1,0 +1,28 @@
+# All lines beginning with `# DP:' are a description of the patch.
+# DP: Description: Fix d_t_fmt and date_fmt in fo_FO
+# DP: Related bugs: #307194
+# DP: Dpatch author: Denis Barbier
+# DP: Patch author: Jacob Sparre Andersen <sparre@nbi.dk>
+# DP: Upstream status: not submitted
+# DP: Date: 2006-01-10
+
+---
+ localedata/locales/fo_FO |    3 ++-
+ 1 file changed, 2 insertions(+), 1 deletion(-)
+
+--- a/localedata/locales/fo_FO
++++ b/localedata/locales/fo_FO
+@@ -98,11 +98,12 @@
+         "oktober";/
+         "november";/
+         "desember"
+-d_t_fmt "%a %d %b %Y %T %Z"
++d_t_fmt "%a. %d. %b. %Y %T %Z"
+ d_fmt   "%d//%m-%Y"
+ t_fmt   "%T"
+ am_pm   "";""
+ t_fmt_ampm  ""
++date_fmt "%1 tann %-e. %B %Y klokkan %T (UTC%z)"
+ week 7;19971130;4
+ first_weekday 2
+ END LC_TIME

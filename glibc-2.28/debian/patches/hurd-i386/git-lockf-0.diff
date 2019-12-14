@@ -1,0 +1,41 @@
+commit b15b1a959040fe8cdfbc51092a7b72032f6c9b86
+Author: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date:   Mon Nov 19 20:22:30 2018 +0100
+
+    hurd: Support lockf at offset 0 with size 0 or 1.
+    
+            * sysdeps/mach/hurd/f_setlk.c: Include <unistd.h>.
+            (__f_setlk): When whence is SEEK_CUR, use __lseek64 to convert it to
+            SEEK_SET.
+
+diff --git a/sysdeps/mach/hurd/f_setlk.c b/sysdeps/mach/hurd/f_setlk.c
+index 718af67e32..edfb292dbf 100644
+--- a/sysdeps/mach/hurd/f_setlk.c
++++ b/sysdeps/mach/hurd/f_setlk.c
+@@ -19,6 +19,7 @@
+ #include <sys/types.h>
+ #include <sys/file.h>
+ #include <fcntl.h>
++#include <unistd.h>
+ #include <errno.h>
+ 
+ /* XXX
+@@ -45,6 +46,18 @@ __f_setlk (int fd, int type, int whence, __off64_t start, __off64_t len, int wai
+   if (cmd != LOCK_UN && wait == 0)
+     cmd |= LOCK_NB;
+ 
++  if (whence == SEEK_CUR)
++    {
++      /* In case the target position is 0, we can support it below.  */
++      __off64_t cur = __lseek64 (fd, 0, SEEK_CUR);
++
++      if (cur >= 0)
++	{
++	  start = cur + start;
++	  whence = SEEK_SET;
++	}
++    }
++
+   switch (whence)
+     {
+     case SEEK_SET:

@@ -1,0 +1,29 @@
+commit 18ad0de6513bf8a8e4ba757c069e6806d07920f8
+Author: Adhemerval Zanella <adhemerval.zanella@linaro.org>
+Date:   Tue Oct 23 14:53:12 2018 -0300
+
+    Fix tst-preadvwritev2 build failure on HURD
+    
+    Commit 7a16bdbb9ff41 uses IOV_MAX, which is not defined on hurd.
+    
+    Checked on a build for i686-gnu.
+    
+            * misc/tst-preadvwritev2-common.c (IOV_MAX): Define if not
+            defined.
+
+diff --git a/misc/tst-preadvwritev2-common.c b/misc/tst-preadvwritev2-common.c
+index 50b9da3fea..3098b4ae0b 100644
+--- a/misc/tst-preadvwritev2-common.c
++++ b/misc/tst-preadvwritev2-common.c
+@@ -37,6 +37,11 @@
+ #define RWF_SUPPORTED	(RWF_HIPRI | RWF_DSYNC | RWF_SYNC | RWF_NOWAIT \
+ 			 | RWF_APPEND)
+ 
++/* Generic uio_lim.h does not define IOV_MAX.  */
++#ifndef IOV_MAX
++# define IOV_MAX 1024
++#endif
++
+ static void
+ do_test_with_invalid_fd (void)
+ {

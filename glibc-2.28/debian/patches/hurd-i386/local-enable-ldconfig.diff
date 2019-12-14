@@ -1,0 +1,44 @@
+# DP: Description: Enable ldconfig and such on hurd-i386
+# DP: Author: Jeff Bailey <jbailey@nisa.net>
+# DP: Related Bugs: #309489
+# DP: Upstream status: Not submitted
+# DP: Status Details: Upstream disagrees with this patch, but I'm
+# DP: putting it in so that we have expected Debian behaviour on the
+# DP: Hurd.  We should review this when the ELF standard supports runpath.
+# DP: Date: 08 Apr 2003
+  
+---
+ elf/ldconfig.c                 |    4 ++++
+ sysdeps/mach/hurd/configure    |    2 ++
+ sysdeps/mach/hurd/configure.ac |    2 ++
+ 3 files changed, 8 insertions(+)
+
+--- a/sysdeps/mach/hurd/configure
++++ b/sysdeps/mach/hurd/configure
+@@ -47,3 +47,5 @@
+ fi
+ 
+ libc_cv_ld_gnu_indirect_function=no
++
++use_ldconfig=yes
+--- a/sysdeps/mach/hurd/configure.ac
++++ b/sysdeps/mach/hurd/configure.ac
+@@ -30,3 +30,5 @@
+ dnl ifunc does not work yet for static binaries
+ dnl http://www.gnu.org/software/hurd/open_issues/ifunc.html
+ libc_cv_ld_gnu_indirect_function=no
++
++use_ldconfig=yes
+--- a/elf/ldconfig.c
++++ b/elf/ldconfig.c
+@@ -59,6 +59,10 @@
+ 
+ #define PACKAGE _libc_intl_domainname
+ 
++#ifndef PATH_MAX
++#define PATH_MAX 1024
++#endif
++
+ static const struct
+ {
+   const char *name;

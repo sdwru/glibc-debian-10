@@ -1,0 +1,22 @@
+See BTS #352600.
+Not submitted yet.
+
+---
+ localedata/locales/zh_TW |    4 ++--
+ 1 file changed, 2 insertions(+), 2 deletions(-)
+
+--- a/localedata/locales/zh_TW
++++ b/localedata/locales/zh_TW
+@@ -114,10 +114,10 @@
+ 	"<U5341><U6708>";"<U5341><U4E00><U6708>";"<U5341><U4E8C><U6708>"
+ 
+ % d_t_fmt: "%Y<y>%m<m>%d<d> (%A) %H<hr>%M<m>%S<s>"
+-d_t_fmt "<U897F><U5143>%Y<U5E74>%m<U6708>%d<U65E5> (%A) %H<U6642>/
++d_t_fmt "%Y<U5E74>%m<U6708>%d<U65E5> (%A) %H<U6642>/
+ %M<U5206>%S<U79D2>"
+ 
+-d_fmt	"<U897F><U5143>%Y<U5E74>%m<U6708>%d<U65E5>"
++d_fmt	"%Y<U5E74>%m<U6708>%d<U65E5>"
+ 
+ t_fmt	"%H<U6642>%M<U5206>%S<U79D2>"
+ 

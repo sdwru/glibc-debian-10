@@ -1,0 +1,18 @@
+2012-04-29  Aurelien Jarno  <aurelien@aurel32.net>
+
+        * locales/en_AU: Change date_fmt to match Australian standards.
+
+---
+ localedata/locales/en_AU |    3 +++
+ 1 file changed, 3 insertions(+)
+
+--- a/localedata/locales/en_AU
++++ b/localedata/locales/en_AU
+@@ -113,6 +113,7 @@
+ t_fmt       "%T"
+ am_pm       "AM";"PM"
+ t_fmt_ampm  "%I:%M:%S %p"
++date_fmt    "%a %e %b %H:%M:%S %Z %Y"
+ week 7;19971130;1
+ END LC_TIME
+ 

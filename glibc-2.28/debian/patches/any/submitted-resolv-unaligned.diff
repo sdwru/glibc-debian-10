@@ -1,0 +1,97 @@
+diff --git a/resolv/res_mkquery.c b/resolv/res_mkquery.c
+index d80b5318e5..99d7d96027 100644
+--- a/resolv/res_mkquery.c
++++ b/resolv/res_mkquery.c
+@@ -83,6 +83,15 @@
+ # define RANDOM_BITS(Var) { uint64_t v64; HP_TIMING_NOW (v64); Var = v64; }
+ #endif
+ 
++/* The structure HEADER is normally aligned to a word boundary and its
++   fields are accessed using word loads and stores.  We need to access
++   this structure when it is aligned on a byte boundary.  This can cause
++   problems on machines with strict alignment.  So, we create a new
++   typedef to reduce its alignment to one.  This ensures the fields are
++   accessed with byte loads and stores.  */
++typedef HEADER __attribute__ ((__aligned__(1))) UHEADER;
++#define HEADER UHEADER
++
+ int
+ __res_context_mkquery (struct resolv_context *ctx, int op, const char *dname,
+                        int class, int type, const unsigned char *data,
+diff --git a/resolv/res_query.c b/resolv/res_query.c
+index 07dc6f6583..f26338bc9b 100644
+--- a/resolv/res_query.c
++++ b/resolv/res_query.c
+@@ -81,6 +81,14 @@
+ #include <string.h>
+ #include <shlib-compat.h>
+ 
++/* The structure HEADER is normally aligned to a word boundary and its
++   fields are accessed using word loads and stores.  We need to access 
++   this structure when it is aligned on a byte boundary.  This can cause
++   problems on machines with strict alignment.  So, we create a new
++   typedef to reduce its alignment to one.  This ensures the fields are
++   accessed with byte loads and stores.  */
++typedef HEADER __attribute__ ((__aligned__(1))) UHEADER;
++
+ #if PACKETSZ > 65536
+ #define MAXPACKET	PACKETSZ
+ #else
+@@ -117,8 +125,8 @@ __libc_res_nquery(res_state statp,
+ 		     int *nanswerp2, int *resplen2, int *answerp2_malloced)
+ {
+ 	struct __res_state *statp = ctx->resp;
+-	HEADER *hp = (HEADER *) answer;
+-	HEADER *hp2;
++	UHEADER *hp = (UHEADER *) answer;
++	UHEADER *hp2;
+ 	int n, use_malloc = 0;
+ 
+ 	size_t bufsize = (type == T_QUERY_A_AND_AAAA ? 2 : 1) * QUERYSIZE;
+@@ -235,7 +243,7 @@ __libc_res_nquery(res_state statp,
+ 
+ 	if (answerp != NULL)
+ 	  /* __res_context_send might have reallocated the buffer.  */
+-	  hp = (HEADER *) *answerp;
++	  hp = (UHEADER *) *answerp;
+ 
+ 	/* We simplify the following tests by assigning HP to HP2 or
+ 	   vice versa.  It is easy to verify that this is the same as
+@@ -246,7 +254,7 @@ __libc_res_nquery(res_state statp,
+ 	  }
+ 	else
+ 	  {
+-	    hp2 = (HEADER *) *answerp2;
++	    hp2 = (UHEADER *) *answerp2;
+ 	    if (n < (int) sizeof (HEADER))
+ 	      {
+ 	        hp = hp2;
+@@ -336,7 +344,7 @@ __libc_res_nsearch(res_state statp,
+ {
+ 	struct __res_state *statp = ctx->resp;
+ 	const char *cp;
+-	HEADER *hp = (HEADER *) answer;
++	UHEADER *hp = (UHEADER *) answer;
+ 	char tmp[NS_MAXDNAME];
+ 	u_int dots;
+ 	int trailing_dot, ret, saved_herrno;
+diff --git a/resolv/res_send.c b/resolv/res_send.c
+index 93db5b9a61..36a389509d 100644
+--- a/resolv/res_send.c
++++ b/resolv/res_send.c
+@@ -110,6 +110,15 @@
+ #include <libc-diag.h>
+ #include <hp-timing.h>
+ 
++/* The structure HEADER is normally aligned to a word boundary and its
++   fields are accessed using word loads and stores.  We need to access 
++   this structure when it is aligned on a byte boundary.  This can cause
++   problems on machines with strict alignment.  So, we create a new
++   typedef to reduce its alignment to one.  This ensures the fields are
++   accessed with byte loads and stores.  */
++typedef HEADER __attribute__ ((__aligned__(1))) UHEADER;
++#define HEADER UHEADER
++
+ #if PACKETSZ > 65536
+ #define MAXPACKET       PACKETSZ
+ #else

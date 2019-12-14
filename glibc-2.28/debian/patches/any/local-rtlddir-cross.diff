@@ -1,0 +1,29 @@
+Description: Install ld.so to slibdir instead of rtlddir to fix cross builds
+ When installing a cross-libc purely for linking purposes but not
+ runtime use, the linker shouldn't be installed in rtlddir, since
+ we won't actually be USING it, and thus referencing the rtlddir
+ path in libc.so ends up blowing up cross-compilers for no reason.
+Author: Adam Conrad <adconrad@ubuntu.com>
+
+--- a/Makeconfig
++++ b/Makeconfig
+@@ -161,7 +161,7 @@
+ ifndef rtlddir
+ rtlddir = $(slibdir)
+ endif
+-inst_rtlddir = $(install_root)$(rtlddir)
++inst_rtlddir = $(install_root)$(slibdir)
+ 
+ # Prefix to put on files installed in $(libdir).  For libraries `libNAME.a',
+ # the prefix is spliced between `lib' and the name, so the linker switch
+--- a/Makerules
++++ b/Makerules
+@@ -1168,7 +1168,7 @@
+ 	 cat $<; \
+ 	 echo 'GROUP ( $(slibdir)/libc.so$(libc.so-version)' \
+ 	      '$(libdir)/$(patsubst %,$(libtype.oS),$(libprefix)$(libc-name))'\
+-	      ' AS_NEEDED (' $(rtlddir)/$(rtld-installed-name) ') )' \
++	      ' AS_NEEDED (' $(slibdir)/$(rtld-installed-name) ') )' \
+ 	) > $@.new
+ ifeq ($(patsubst gnu%,,$(config-os)),)
+ 	echo 'INPUT ( AS_NEEDED ( -lmachuser -lhurduser ) )' >> $@.new

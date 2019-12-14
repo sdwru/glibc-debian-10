@@ -1,0 +1,29 @@
+Description: Turn off HAVE_FLOAT128 for CUDACC and ICC compilers.
+Author: Adam Conrad <adconrad@0c3.net>
+Bug-Ubuntu: https://bugs.launchpad.net/bugs/1717257
+Forwarded: no
+Last-Update: 2017-10-11
+
+--- glibc-2.26.orig/sysdeps/x86/bits/floatn.h
++++ glibc-2.26/sysdeps/x86/bits/floatn.h
+@@ -28,7 +28,8 @@
+    support, for x86_64 and x86.  */
+ #if (defined __x86_64__							\
+      ? __GNUC_PREREQ (4, 3)						\
+-     : (defined __GNU__ ? __GNUC_PREREQ (4, 5) : __GNUC_PREREQ (4, 4)))
++     : (defined __GNU__ ? __GNUC_PREREQ (4, 5) : __GNUC_PREREQ (4, 4))) \
++     &&  !defined(__CUDACC__) && !defined(__ICC)
+ # define __HAVE_FLOAT128 1
+ #else
+ # define __HAVE_FLOAT128 0
+--- glibc-2.26.orig/sysdeps/powerpc/bits/floatn.h
++++ glibc-2.26/sysdeps/powerpc/bits/floatn.h
+@@ -25,7 +25,7 @@
+    floating-point type with the IEEE 754 binary128 format, and this glibc
+    includes corresponding *f128 interfaces for it.  */
+ #if defined _ARCH_PWR8 && defined __LITTLE_ENDIAN__ && (_CALL_ELF == 2) \
+-    && defined __FLOAT128__ && !defined __NO_LONG_DOUBLE_MATH
++    && defined __FLOAT128__ && !defined __NO_LONG_DOUBLE_MATH && !defined(__CUDACC__) && !defined(__ICC)
+ # define __HAVE_FLOAT128 1
+ #else
+ # define __HAVE_FLOAT128 0

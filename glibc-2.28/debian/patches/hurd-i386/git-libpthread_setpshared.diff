@@ -1,0 +1,65 @@
+commit 55137f7dd939bc8403a63f4cade73ff90575b821
+Author: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date:   Wed Jan 2 22:21:34 2019 +0100
+
+    hurd: advertise *_setpshared as not supported
+    
+    The functions themselves return 0, but initializing a mutex/etc with       .
+    pshared set to 1 will fail anyway                                          .
+    
+            * sysdeps/htl/pt-barrierattr-setpshared.c
+            (pthread_barrierattr_setpshared): Add stub warning.
+            * sysdeps/htl/pt-condattr-setpshared.c
+            (pthread_condattr_setpshared): Likewise.
+            * sysdeps/htl/pt-mutexattr-setpshared.c
+            (pthread_mutexattr_setpshared): Likewise.
+            * sysdeps/htl/pt-rwlockattr-setpshared.c
+            (pthread_rwlockattr_setpshared): Likewise.
+            * sysdeps/mach/hurd/htl/pt-mutexattr-setpshared.c
+            (pthread_mutexattr_setpshared): Likewise.
+
+diff --git a/sysdeps/htl/pt-barrierattr-setpshared.c b/sysdeps/htl/pt-barrierattr-setpshared.c
+index b4999e80ef..4756a39fad 100644
+--- a/sysdeps/htl/pt-barrierattr-setpshared.c
++++ b/sysdeps/htl/pt-barrierattr-setpshared.c
+@@ -35,3 +35,4 @@ pthread_barrierattr_setpshared (pthread_barrierattr_t *attr, int pshared)
+       return EINVAL;
+     }
+ }
++stub_warning (pthread_barrierattr_setpshared)
+diff --git a/sysdeps/htl/pt-condattr-setpshared.c b/sysdeps/htl/pt-condattr-setpshared.c
+index 46662f73fa..aff0537f66 100644
+--- a/sysdeps/htl/pt-condattr-setpshared.c
++++ b/sysdeps/htl/pt-condattr-setpshared.c
+@@ -35,3 +35,4 @@ pthread_condattr_setpshared (pthread_condattr_t *attr, int pshared)
+       return EINVAL;
+     }
+ }
++stub_warning (pthread_condattr_setpshared)
+diff --git a/sysdeps/htl/pt-mutexattr-setpshared.c b/sysdeps/htl/pt-mutexattr-setpshared.c
+index fb7da72ae0..a3ecf0ea1a 100644
+--- a/sysdeps/htl/pt-mutexattr-setpshared.c
++++ b/sysdeps/htl/pt-mutexattr-setpshared.c
+@@ -35,3 +35,4 @@ pthread_mutexattr_setpshared (pthread_mutexattr_t *attr, int pshared)
+       return EINVAL;
+     }
+ }
++stub_warning (pthread_mutexattr_setpshared)
+diff --git a/sysdeps/htl/pt-rwlockattr-setpshared.c b/sysdeps/htl/pt-rwlockattr-setpshared.c
+index 12597dceaf..63eb14a09d 100644
+--- a/sysdeps/htl/pt-rwlockattr-setpshared.c
++++ b/sysdeps/htl/pt-rwlockattr-setpshared.c
+@@ -35,3 +35,4 @@ pthread_rwlockattr_setpshared (pthread_rwlockattr_t *attr, int pshared)
+       return EINVAL;
+     }
+ }
++stub_warning (pthread_rwlockattr_setpshared)
+diff --git a/sysdeps/mach/hurd/htl/pt-mutexattr-setpshared.c b/sysdeps/mach/hurd/htl/pt-mutexattr-setpshared.c
+index faed769b70..f99e958601 100644
+--- a/sysdeps/mach/hurd/htl/pt-mutexattr-setpshared.c
++++ b/sysdeps/mach/hurd/htl/pt-mutexattr-setpshared.c
+@@ -32,3 +32,4 @@ pthread_mutexattr_setpshared (pthread_mutexattr_t *attrp, int pshared)
+   attrp->__pshared = pshared;
+   return 0;
+ }
++stub_warning (pthread_mutexattr_setpshared)

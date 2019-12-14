@@ -1,0 +1,121 @@
+commit 7fa495cdf750c257ed897eca189aabc3a62d5f2b
+Author: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date:   Sat Nov 10 11:20:12 2018 +0000
+
+    Hurd: Fix ulinks in fd table reallocation
+    
+            * hurd/hurd/userlink.h (_hurd_userlink_move): New function.
+            * hurd/hurd/port.h (_hurd_port_move): New function.
+            * sysdeps/mach/hurd/spawni.c (NEW_ULINK_TABLE): New macro.
+            (EXPAND_DTABLE): Use NEW_ULINK_TABLE macro for ulink_dtable.
+
+commit 278fdabd8c45dc215222facd36febfc3f6f2a95d
+Author: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date:   Sun Nov 11 20:08:29 2018 +0100
+
+    hurd: Fix spawni's user_link reallocation
+    
+    * hurd/hurd/userlink.h (_hurd_userlink_move): Make new_link's
+    predecessor point to new_link instead of link.
+
+---
+ hurd/hurd/port.h           |   25 +++++++++++++++++++++++++
+ hurd/hurd/userlink.h       |   24 ++++++++++++++++++++++++
+ sysdeps/mach/hurd/spawni.c |   12 +++++++++++-
+ 3 files changed, 60 insertions(+), 1 deletion(-)
+
+--- a/hurd/hurd/port.h
++++ b/hurd/hurd/port.h
+@@ -128,6 +128,31 @@ _hurd_port_get (struct hurd_port *port,
+ #endif
+ 
+ 
++/* Relocate LINK to NEW_LINK.
++   To be used when e.g. reallocating a link array.  */
++
++extern void
++_hurd_port_move (struct hurd_port *port,
++		 struct hurd_userlink *new_link,
++		 struct hurd_userlink *link);
++
++#if defined __USE_EXTERN_INLINES && defined _LIBC
++# if IS_IN (libc)
++_HURD_PORT_H_EXTERN_INLINE void
++_hurd_port_move (struct hurd_port *port,
++		 struct hurd_userlink *new_link,
++		 struct hurd_userlink *link)
++{
++  HURD_CRITICAL_BEGIN;
++  __spin_lock (&port->lock);
++  _hurd_userlink_move (new_link, link);
++  __spin_unlock (&port->lock);
++  HURD_CRITICAL_END;
++}
++# endif
++#endif
++
++
+ /* Free a reference gotten with `USED_PORT = _hurd_port_get (PORT, LINK);' */
+ 
+ extern void
+--- a/hurd/hurd/userlink.h
++++ b/hurd/hurd/userlink.h
+@@ -138,6 +138,30 @@ _hurd_userlink_unlink (struct hurd_userl
+ # endif
+ #endif
+ 
++/* Relocate LINK to NEW_LINK.
++   To be used when e.g. reallocating a link array.  */
++
++extern void _hurd_userlink_move (struct hurd_userlink *new_link,
++                                struct hurd_userlink *link);
++
++#if defined __USE_EXTERN_INLINES && defined _LIBC
++# if IS_IN (libc)
++_HURD_USERLINK_H_EXTERN_INLINE void
++_hurd_userlink_move (struct hurd_userlink *new_link,
++                     struct hurd_userlink *link)
++{
++  *new_link = *link;
++
++  if (new_link->resource.next != NULL)
++    new_link->resource.next->resource.prevp = &new_link->resource.next;
++  *new_link->resource.prevp = new_link;
++
++  if (new_link->thread.next != NULL)
++    new_link->thread.next->thread.prevp = &new_link->thread.next;
++  *new_link->thread.prevp = new_link;
++}
++# endif
++#endif
+ 
+ /* Clear all users from *CHAINP.  Call this when the resource *CHAINP
+    protects is changing.  If the return value is nonzero, no users are on
+--- a/sysdeps/mach/hurd/spawni.c
++++ b/sysdeps/mach/hurd/spawni.c
+@@ -406,7 +406,7 @@ __spawni (pid_t *pid, const char *file,
+ 	    {								      \
+ 	      /* We need to expand the dtable for the child.  */	      \
+ 	      NEW_TABLE (dtable, newfd);				      \
+-	      NEW_TABLE (ulink_dtable, newfd);				      \
++	      NEW_ULINK_TABLE (ulink_dtable, newfd);			      \
+ 	      NEW_TABLE (dtable_cells, newfd);				      \
+ 	      dtablesize = newfd + 1;					      \
+ 	    }								      \
+@@ -417,6 +417,16 @@ __spawni (pid_t *pid, const char *file,
+   memcpy (new_##x, x, dtablesize * sizeof (x[0]));			      \
+   memset (&new_##x[dtablesize], 0, (newfd + 1 - dtablesize) * sizeof (x[0])); \
+   x = new_##x; } while (0)
++#define NEW_ULINK_TABLE(x, newfd) \
++  do { __typeof (x) new_##x = __alloca ((newfd + 1) * sizeof (x[0]));	      \
++  unsigned i;								      \
++  for (i = 0; i < dtablesize; i++)					      \
++    if (dtable_cells[i] != NULL)					      \
++      _hurd_port_move (dtable_cells[i], &new_##x[i], &x[i]);		      \
++    else								      \
++      memset(&new_##x[i], 0, sizeof(new_##x[i]));			      \
++  memset (&new_##x[dtablesize], 0, (newfd + 1 - dtablesize) * sizeof (x[0])); \
++  x = new_##x; } while (0)
+ 
+ 	struct __spawn_action *action = &file_actions->__actions[i];
+ 

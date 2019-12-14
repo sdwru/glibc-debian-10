@@ -1,0 +1,140 @@
+# All lines beginning with `# DP:' are a description of the patch.
+# DP: Description: Various fixes for all French locales
+# DP: Related bugs: #248377  #351786 #345481
+# DP: Dpatch author: Denis Barbier <barbier@debian.org>
+# DP: Patch author: Denis Barbier
+# DP: Upstream status: not submitted
+# DP: Date: 2006-01-10
+
+---
+ localedata/locales/fr_BE |    5 ++++-
+ localedata/locales/fr_CA |    1 +
+ localedata/locales/fr_CH |    5 ++++-
+ localedata/locales/fr_FR |    7 +++++++
+ localedata/locales/fr_LU |    5 ++++-
+ 5 files changed, 20 insertions(+), 3 deletions(-)
+
+--- a/localedata/locales/fr_BE
++++ b/localedata/locales/fr_BE
+@@ -120,6 +120,7 @@
+ t_fmt   "%T"
+ am_pm   "";""
+ t_fmt_ampm ""
++date_fmt "%A %-e %B %Y, %H:%M:%S (UTC%z)"
+ 
+ week    7;19971130;4
+ first_weekday 2
+@@ -140,7 +141,7 @@
+ END LC_MEASUREMENT
+ 
+ LC_NAME
+-name_fmt    "%d%t%g%t%m%t%f"
++copy "fr_FR"
+ END LC_NAME
+ 
+ LC_ADDRESS
+@@ -150,6 +151,8 @@
+ country_ab3 "BEL"
+ country_num 056
+ country_car "B"
++country_post "BE"
++country_isbn "979-10"
+ lang_name "fran<U00E7>ais"
+ lang_ab      "fr"
+ lang_term    "fra"
+--- a/localedata/locales/fr_CA
++++ b/localedata/locales/fr_CA
+@@ -117,6 +117,7 @@
+ t_fmt   "%T"
+ am_pm   "";""
+ t_fmt_ampm ""
++date_fmt "%A %-e %B %Y, %H:%M:%S (UTC%z)"
+ week 7;19971130;1
+ END LC_TIME
+ 
+--- a/localedata/locales/fr_CH
++++ b/localedata/locales/fr_CH
+@@ -104,6 +104,7 @@
+ t_fmt   "%T"
+ am_pm   "";""
+ t_fmt_ampm ""
++date_fmt "%A %-e %B %Y, %H:%M:%S (UTC%z)"
+ week 7;19971130;4
+ first_weekday 2
+ END LC_TIME
+@@ -123,7 +124,7 @@
+ END LC_MEASUREMENT
+ 
+ LC_NAME
+-name_fmt    "%d%t%g%t%m%t%f"
++copy "fr_FR"
+ END LC_NAME
+ 
+ LC_ADDRESS
+@@ -133,6 +134,8 @@
+ country_ab3 "CHE"
+ country_num 756
+ country_car "CH"
++country_post "CH"
++country_isbn "979-10"
+ lang_name "fran<U00E7>ais"
+ lang_ab      "fr"
+ lang_term    "fra"
+--- a/localedata/locales/fr_FR
++++ b/localedata/locales/fr_FR
+@@ -136,6 +136,7 @@
+ t_fmt   "%T"
+ am_pm   "";""
+ t_fmt_ampm ""
++date_fmt "%A %-e %B %Y, %H:%M:%S (UTC%z)"
+ 
+ week    7;19971130;4
+ first_weekday 2
+@@ -158,6 +159,11 @@
+ 
+ LC_NAME
+ name_fmt    "%d%t%g%t%m%t%f"
++name_gen    ""
++name_mr     "M."
++name_mrs    "Mme"
++name_miss   "Mlle"
++name_ms     ""
+ END LC_NAME
+ 
+ LC_ADDRESS
+@@ -166,6 +172,7 @@
+ country_ab2 "FR"
+ country_ab3 "FRA"
+ country_num 250
++country_post "FR"
+ country_isbn "979-10"
+ country_car  "F"
+ lang_name "fran<U00E7>ais"
+--- a/localedata/locales/fr_LU
++++ b/localedata/locales/fr_LU
+@@ -120,6 +120,7 @@
+ t_fmt   "%T"
+ am_pm   "";""
+ t_fmt_ampm ""
++date_fmt "%A %-e %B %Y, %H:%M:%S (UTC%z)"
+ week 7;19971130;4
+ first_weekday 2
+ END LC_TIME
+@@ -139,7 +140,7 @@
+ END LC_MEASUREMENT
+ 
+ LC_NAME
+-name_fmt    "%d%t%g%t%m%t%f"
++copy "fr_FR"
+ END LC_NAME
+ 
+ LC_ADDRESS
+@@ -149,6 +150,8 @@
+ country_ab3 "LUX"
+ country_num 442
+ country_car "L"
++country_post "LU"
++country_isbn "979-10"
+ lang_name "fran<U00E7>ais"
+ lang_ab      "fr"
+ lang_term    "fra"

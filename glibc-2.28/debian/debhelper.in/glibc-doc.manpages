@@ -1,0 +1,8 @@
+debian/local/manpages/pthread_atfork.3
+debian/local/manpages/pthread_condattr_init.3
+debian/local/manpages/pthread_cond_init.3
+debian/local/manpages/pthread_key_create.3
+debian/local/manpages/pthread_mutexattr_init.3
+debian/local/manpages/pthread_mutexattr_setkind_np.3
+debian/local/manpages/pthread_mutex_init.3
+debian/local/manpages/pthread_once.3

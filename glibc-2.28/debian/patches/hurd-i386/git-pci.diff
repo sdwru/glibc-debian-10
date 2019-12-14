@@ -1,0 +1,21 @@
+commit fc783076ec496a55c029be14617ea16a24589f55
+Author: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Date:   Wed Oct 31 22:43:44 2018 +0100
+
+    hurd: Add pci RPC stubs
+    
+            * hurd/Makefile (user-interfaces): Add pci.
+
+diff --git a/hurd/Makefile b/hurd/Makefile
+index a41737f497..2605d62e56 100644
+--- a/hurd/Makefile
++++ b/hurd/Makefile
+@@ -34,7 +34,7 @@ user-interfaces		:= $(addprefix hurd/,\
+ 				       exec exec_experimental exec_startup crash interrupt \
+ 				       fs fs_experimental fsys io io_reply io_request \
+ 				       term tioctl socket ifsock \
+-				       login password pfinet \
++				       login password pfinet pci \
+ 				       )
+ server-interfaces	:= hurd/msg faultexc
+ 

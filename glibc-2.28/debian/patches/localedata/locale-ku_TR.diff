@@ -1,0 +1,122 @@
+# DP: Description: Please add Kurdish locale
+# DP: Related bugs: BZ870
+# DP: Dpatch author: Denis Barbier <barbier@debian.org>
+# DP: Patch author: Kader DILSIZ, Pablo Saratxaga
+# DP: Upstream status: Version 0.1 submitted in the original bugreport
+# DP:   has been committed, this new version has been sent just after.
+# DP: Date: 2006-01-06
+
+---
+ localedata/locales/ku_TR |   70 ++++++++++++++++++++++++-----------------------
+ 1 file changed, 36 insertions(+), 34 deletions(-)
+
+--- a/localedata/locales/ku_TR
++++ b/localedata/locales/ku_TR
+@@ -20,6 +20,8 @@
+ % Date: 2003-07-27
+ % Users: general
+ % History:
++% 0.2  2005-04-24 Erdal Ronah<U00EE> <erdal.ronahi@gmail.com>
++%      Fix LC_CTYPE and LC_NAME sections.  Remove dotless i from LC_COLLATE
+ 
+ LC_IDENTIFICATION
+ title      "Kurdish (latin) locale for Turkey"
+@@ -31,8 +33,8 @@
+ fax        ""
+ language   "Kurdish"
+ territory  "Turkey"
+-revision   "0.1"
+-date       "2003-07-27"
++revision   "0.2"
++date       "2005-04-24"
+ 
+ category "i18n:2012";LC_IDENTIFICATION
+ category "i18n:2012";LC_CTYPE
+@@ -108,35 +110,35 @@
+ END LC_NUMERIC
+ 
+ LC_TIME
+-abday       "y<U00EA>k";"dus";/
+-            "s<U00EA>s";"<U00E7>ar";/
+-            "p<U00EA>n";"<U00EE>n<U00EE>";/
+-            "sep"
+-day         "y<U00EA>ks<U00EA>m";/
+-            "dus<U00EA>m";/
+-            "s<U00EA>s<U00EA>m";/
+-            "<U00E7>ars<U00EA>m";/
+-            "p<U00EA>ncs<U00EA>m";/
+-            "<U00EE>n<U00EE>";/
+-            "sept"
++abday       "Y<U015F>";"D<U015F>";/
++            "S<U015F>";"<U00C7><U015F>";/
++            "P<U015F>";"<U00CE>n";/
++            "<U015E>"
++day         "Yek<U015F>em";/
++            "Du<U015F>em";/
++            "S<U00EA><U015F>em";/
++            "<U00C7>ar<U015F>em";/
++            "P<U00EA>nc<U015F>em";/
++            "<U00CE>n";/
++            "<U015E>em<U00EE>"
+ abmon       "<U00C7>il";"Sib";/
+             "Ada";"N<U00EE>s";/
+             "Gul";"Hez";/
+             "T<U00EE>r";"Teb";/
+             "<U00CE>lo";"Cot";/
+             "Mij";"Kan"
+-mon         "<U00C7>ile";/
+-            "Sibat";/
+-            "Adar";/
+-            "N<U00EE>san";/
+-            "Gulan";/
+-            "Hez<U00EE>ran";/
+-            "T<U00EE>rmeh";/
+-            "Tebax";/
+-            "<U00CE>lon";/
+-            "Cotmeh";/
+-            "Mijdar";/
+-            "Kan<U00FB>n"
++mon         "<U00E7>ile";/
++            "sibat";/
++            "adar";/
++            "n<U00EE>san";/
++            "gulan";/
++            "hez<U00EE>ran";/
++            "t<U00EE>rmeh";/
++            "tebax";/
++            "<U00EE>lon";/
++            "cotmeh";/
++            "mijdar";/
++            "kan<U00FB>n"
+ d_t_fmt  "%A %d %B %Y %T %Z"
+ d_fmt   "%d//%m//%Y"
+ t_fmt       "%T"
+@@ -170,19 +172,19 @@
+ LC_NAME
+ name_fmt    "%d%t%g%t%m%t%f"
+ % TODO
+-% Sayın
+-name_gen    "Say<U0131>n"
+-name_mr     "M."
+-name_mrs    "Jne"
+-name_ms     "Jne"
+-% "Kc,k"
+-name_miss   "K<U00E7>k"
++% Bir<U00EA>z
++name_gen    "Bar<U00EA>z"
++name_mr     "Bar<U00EA>z"
++% "Bir<U00EA>z"
++name_mrs    "Bar<U00EA>z"
++name_ms     "Bar<U00EA>z"
++% "Bir<U00EA>z"
++name_miss   "Bar<U00EA>z"
+ END LC_NAME
+ 
+ LC_ADDRESS
+ postal_fmt    "%f%N%a%N%d%N%b%N%s %h %e %r%N%z %T%N%c%N"
+-% TODO
+-country_name "Turkey"
++country_name "Tirkiye"
+ country_post "TR"
+ country_ab2  "TR"
+ country_ab3  "TUR"

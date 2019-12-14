@@ -1,0 +1,109 @@
+From: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Subject: [PATCH] Fix SS_ONSTACK support
+
+* sysdeps/mach/hurd/i386/sigreturn.c (__sigreturn2): New function,
+unlocks SS and returns to the saved PC.
+(__sigreturn): Do not unlock SS, and "return" into __sigreturn2 on the
+thread stack instead of the saved PC.
+
+---
+ sysdeps/mach/hurd/i386/sigreturn.c | 68 +++++++++++++++++++++++---------------
+ 1 file changed, 42 insertions(+), 26 deletions(-)
+
+diff --git a/sysdeps/mach/hurd/i386/sigreturn.c b/sysdeps/mach/hurd/i386/sigreturn.c
+index 83c0246..204bd47 100644
+--- a/sysdeps/mach/hurd/i386/sigreturn.c
++++ b/sysdeps/mach/hurd/i386/sigreturn.c
+@@ -24,6 +24,36 @@ register int *sp asm ("%esp");
+ #include <stdlib.h>
+ #include <string.h>
+ 
++/* This is run on the thread stack after restoring it, to be able to
++   unlock SS off sigstack.  */
++static void
++__sigreturn2 (int *usp)
++{
++  struct hurd_sigstate *ss = _hurd_self_sigstate ();
++  _hurd_sigstate_unlock (ss);
++
++  sp = usp;
++#define A(line) asm volatile (#line)
++  /* The members in the sigcontext are arranged in this order
++     so we can pop them easily.  */
++
++  /* Pop the segment registers (except %cs and %ss, done last).  */
++  A (popl %gs);
++  A (popl %fs);
++  A (popl %es);
++  A (popl %ds);
++  /* Pop the general registers.  */
++  A (popa);
++  /* Pop the processor flags.  */
++  A (popf);
++  /* Return to the saved PC.  */
++  A (ret);
++
++  /* Firewall.  */
++  A (hlt);
++#undef A
++}
++
+ int
+ __sigreturn (struct sigcontext *scp)
+ {
+@@ -67,13 +97,7 @@ __sigreturn (struct sigcontext *scp)
+     }
+ 
+   if (scp->sc_onstack)
+-    {
+-      ss->sigaltstack.ss_flags &= ~SS_ONSTACK;
+-      /* XXX cannot unlock until off sigstack */
+-      abort ();
+-    }
+-  else
+-    _hurd_sigstate_unlock (ss);
++    ss->sigaltstack.ss_flags &= ~SS_ONSTACK;
+ 
+   /* Destroy the MiG reply port used by the signal handler, and restore the
+      reply port in use by the thread when interrupted.  */
+@@ -108,27 +132,19 @@ __sigreturn (struct sigcontext *scp)
+     *--usp = scp->sc_efl;
+     memcpy (usp -= 12, &scp->sc_i386_thread_state, 12 * sizeof (int));
+ 
+-    sp = usp;
+-
+-#define A(line) asm volatile (#line)
+-    /* The members in the sigcontext are arranged in this order
+-       so we can pop them easily.  */
+-
+-    /* Pop the segment registers (except %cs and %ss, done last).  */
+-    A (popl %gs);
+-    A (popl %fs);
+-    A (popl %es);
+-    A (popl %ds);
+-    /* Pop the general registers.  */
+-    A (popa);
+-    /* Pop the processor flags.  */
+-    A (popf);
+-    /* Return to the saved PC.  */
+-    A (ret);
++    /* Pass usp to __sigreturn2 so it can unwind itself easily.  */
++    *(usp-1) = (int) usp;
++    --usp;
++    /* Bogus return address for __sigreturn2 */
++    *--usp = 0;
++    *--usp = (int) __sigreturn2;
+ 
++    /* Restore thread stack */
++    sp = usp;
++    /* Return into __sigreturn2.  */
++    asm volatile ("ret");
+     /* Firewall.  */
+-    A (hlt);
+-#undef A
++    asm volatile ("hlt");
+   }
+ 
+   /* NOTREACHED */
+-- 
+tg: (ab44f81..) t/ONSTACK (depends on: t/tls-threadvar t/hurdsig-global-dispositions)

@@ -1,0 +1,26 @@
+From: Samuel Thibault <samuel.thibault@ens-lyon.org>
+Subject: [PATCH] t/EGREGIOUS-fr
+
+Fix grammar in french translation for EGREGIOUS
+
+Signed-off-by: Samuel Thibault <samuel.thibault@ens-lyon.org>
+
+---
+ po/fr.po | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/po/fr.po b/po/fr.po
+index 65f9a6a..0065098 100644
+--- a/po/fr.po
++++ b/po/fr.po
+@@ -6459,7 +6459,7 @@ msgstr " ?"
+ #. TRANS You did @strong{what}?
+ #: sysdeps/gnu/errlist.c:969
+ msgid "You really blew it this time"
+-msgstr "Vous avez vraiment tout gâcher cette fois-ci"
++msgstr "Vous avez vraiment tout gâché cette fois-ci"
+ 
+ #. TRANS Go home and have a glass of warm, dairy-fresh milk.
+ #: sysdeps/gnu/errlist.c:978
+-- 
+tg: (7bb5f8a..) t/EGREGIOUS-fr (depends on: baseline)
