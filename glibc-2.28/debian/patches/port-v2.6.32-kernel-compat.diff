@@ -1,0 +1,640 @@
+Port linux kernel v2.6.32 from glibc-2.24 to glibc-2.28
+
+---
+ sysdeps/unix/sysv/linux/configure          |    2 
+ sysdeps/unix/sysv/linux/configure.ac       |    2 
+ sysdeps/unix/sysv/linux/getrlimit64.c      |   38 +++++
+ sysdeps/unix/sysv/linux/internal_statvfs.c |  195 +++++++++++++++++++++++++++++
+ sysdeps/unix/sysv/linux/kernel-features.h  |   25 +++
+ sysdeps/unix/sysv/linux/prlimit.c          |   11 +
+ sysdeps/unix/sysv/linux/recvmmsg.c         |   58 ++++++++
+ sysdeps/unix/sysv/linux/sendmmsg.c         |   61 ++++++++-
+ sysdeps/unix/sysv/linux/setrlimit.c        |    9 +
+ sysdeps/unix/sysv/linux/setrlimit64.c      |   37 ++++-
+ sysdeps/unix/sysv/linux/tst-setgetname.c   |   13 +
+ 11 files changed, 428 insertions(+), 23 deletions(-)
+
+--- a/sysdeps/unix/sysv/linux/configure
++++ b/sysdeps/unix/sysv/linux/configure
+@@ -51,7 +51,7 @@
+ # set arch_minimum_kernel already, let that override our defaults here.
+ # Note that we presume such a fragment has set libc_cv_gcc_unwind_find_fde
+ # if appropriate too.
+-test -n "$arch_minimum_kernel" || arch_minimum_kernel=3.2.0
++test -n "$arch_minimum_kernel" || arch_minimum_kernel=2.6.32
+ if test -n "$minimum_kernel"; then
+ 
+   user_version=$((`echo "$minimum_kernel.0.0.0" | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1 \* 65536 + \2 \* 256 + \3/'`))
+--- a/sysdeps/unix/sysv/linux/configure.ac
++++ b/sysdeps/unix/sysv/linux/configure.ac
+@@ -33,7 +33,7 @@
+ # set arch_minimum_kernel already, let that override our defaults here.
+ # Note that we presume such a fragment has set libc_cv_gcc_unwind_find_fde
+ # if appropriate too.
+-test -n "$arch_minimum_kernel" || arch_minimum_kernel=3.2.0
++test -n "$arch_minimum_kernel" || arch_minimum_kernel=2.6.32
+ if test -n "$minimum_kernel"; then
+   changequote(,)
+   user_version=$((`echo "$minimum_kernel.0.0.0" | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1 \* 65536 + \2 \* 256 + \3/'`))
+--- a/sysdeps/unix/sysv/linux/getrlimit64.c
++++ b/sysdeps/unix/sysv/linux/getrlimit64.c
+@@ -1,17 +1,14 @@
+ /* Linux getrlimit64 implementation (64 bits rlim_t).
+    Copyright (C) 2010-2018 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+-
+    The GNU C Library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+-
+    The GNU C Library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+-
+    You should have received a copy of the GNU Lesser General Public
+    License along with the GNU C Library; if not, see
+    <http://www.gnu.org/licenses/>.  */
+@@ -35,7 +32,40 @@
+ int
+ __getrlimit64 (enum __rlimit_resource resource, struct rlimit64 *rlimits)
+ {
+-  return INLINE_SYSCALL_CALL (prlimit64, 0, resource, NULL, rlimits);
++  #ifdef __NR_prlimit64
++  int res = INLINE_SYSCALL_CALL (prlimit64, 0, resource, NULL, rlimits);	
++  if (res == 0 || errno != ENOSYS)	
++    return res;	
++#endif	
++
++/* The fallback code only makes sense if the platform supports either	
++   __NR_ugetrlimit and/or __NR_getrlimit.  */	
++#if defined (__NR_ugetrlimit) || defined (__NR_getrlimit)	
++# ifndef __NR_ugetrlimit	
++#  define __NR_ugetrlimit __NR_getrlimit	
++# endif	
++# if __RLIM_T_MATCHES_RLIM64_T	
++#  define rlimits32 (*rlimits)	
++# else	
++  struct rlimit rlimits32;	
++# endif	
++
++  if (INLINE_SYSCALL_CALL (ugetrlimit, resource, &rlimits32) < 0)	
++    return -1;	
++
++# if !__RLIM_T_MATCHES_RLIM64_T	
++  if (rlimits32.rlim_cur == RLIM_INFINITY)	
++    rlimits->rlim_cur = RLIM64_INFINITY;	
++  else	
++    rlimits->rlim_cur = rlimits32.rlim_cur;	
++  if (rlimits32.rlim_max == RLIM_INFINITY)	
++    rlimits->rlim_max = RLIM64_INFINITY;	
++  else	
++    rlimits->rlim_max = rlimits32.rlim_max;	
++# endif /* !__RLIM_T_MATCHES_RLIM64_T */	
++#endif /* defined (__NR_ugetrlimit) || defined (__NR_getrlimit)  */	
++
++  return 0;
+ }
+ libc_hidden_def (__getrlimit64)
+ 
+--- a/sysdeps/unix/sysv/linux/internal_statvfs.c
++++ b/sysdeps/unix/sysv/linux/internal_statvfs.c
+@@ -39,6 +39,190 @@
+ # define STATFS statfs
+ # define STATVFS statvfs
+ # define INTERNAL_STATVFS __internal_statvfs
++
++# ifndef __ASSUME_STATFS_F_FLAGS	
++int	
++__statvfs_getflags (const char *name, int fstype, int fd)	
++{	
++  struct stat64 st;	
++
++  if ((fd < 0 ? stat64 (name, &st) : fstat64 (fd, &st)) < 0)	
++    return 0;	
++
++  const char *fsname = NULL;	
++  const char *fsname2 = NULL;	
++  const char *fsname3 = NULL;	
++
++  /* Map the filesystem type we got from the statfs call to a string.  */	
++  switch (fstype)	
++    {	
++    case EXT2_SUPER_MAGIC:	
++      fsname = "ext4";	
++      fsname2 = "ext3";	
++      fsname3 = "ext2";	
++      break;	
++    case DEVPTS_SUPER_MAGIC:	
++      fsname= "devpts";	
++      break;	
++    case SHMFS_SUPER_MAGIC:	
++      fsname = "tmpfs";	
++      break;	
++    case PROC_SUPER_MAGIC:	
++      fsname = "proc";	
++      break;	
++    case USBDEVFS_SUPER_MAGIC:	
++      fsname = "usbdevfs";	
++      break;	
++    case AUTOFS_SUPER_MAGIC:	
++      fsname = "autofs";	
++      break;	
++    case NFS_SUPER_MAGIC:	
++      fsname = "nfs";	
++      break;	
++    case SYSFS_MAGIC:	
++      fsname = "sysfs";	
++      break;	
++    case REISERFS_SUPER_MAGIC:	
++      fsname = "reiserfs";	
++      break;	
++    case XFS_SUPER_MAGIC:	
++      fsname = "xfs";	
++      break;	
++    case JFS_SUPER_MAGIC:	
++      fsname = "jfs";	
++      break;	
++    case HPFS_SUPER_MAGIC:	
++      fsname = "hpfs";	
++      break;	
++    case DEVFS_SUPER_MAGIC:	
++      fsname = "devfs";	
++      break;	
++    case ISOFS_SUPER_MAGIC:	
++      fsname = "iso9660";	
++      break;	
++    case MSDOS_SUPER_MAGIC:	
++      fsname = "msdos";	
++      break;	
++    case NTFS_SUPER_MAGIC:	
++      fsname = "ntfs";	
++      break;	
++    case LOGFS_MAGIC_U32:	
++      fsname = "logfs";	
++      break;	
++    case BTRFS_SUPER_MAGIC:	
++      fsname = "btrfs";	
++      break;	
++    case CGROUP_SUPER_MAGIC:	
++      fsname = "cgroup";	
++      break;	
++    case LUSTRE_SUPER_MAGIC:	
++      fsname = "lustre";	
++      break;	
++    case F2FS_SUPER_MAGIC:	
++      fsname = "f2fs";	
++      break;	
++    case EFIVARFS_MAGIC:	
++      fsname = "efivarfs";	
++      break;	
++    }	
++
++  FILE *mtab = __setmntent ("/proc/mounts", "r");	
++  if (mtab == NULL)	
++    mtab = __setmntent (_PATH_MOUNTED, "r");	
++
++  int result = 0;	
++  if (mtab != NULL)	
++    {	
++      bool success = false;	
++      struct mntent mntbuf;	
++      char tmpbuf[1024];	
++
++      /* No locking needed.  */	
++      (void) __fsetlocking (mtab, FSETLOCKING_BYCALLER);	
++
++    again:	
++      while (__getmntent_r (mtab, &mntbuf, tmpbuf, sizeof (tmpbuf)))	
++	{	
++	  /* In a first round we look for a given mount point, if	
++	     we have a name.  */	
++	  if (name != NULL && strcmp (name, mntbuf.mnt_dir) != 0)	
++	    continue;	
++	  /* We need to look at the entry only if the filesystem	
++	     name matches.  If we have a filesystem name.  */	
++	  else if (fsname != NULL	
++		   && strcmp (fsname, mntbuf.mnt_type) != 0	
++		   && (fsname2 == NULL	
++		       || strcmp (fsname2, mntbuf.mnt_type) != 0)	
++		   && (fsname3 == NULL	
++		       || strcmp (fsname3, mntbuf.mnt_type) != 0))	
++	    continue;	
++
++	  /* Find out about the device the current entry is for.  */	
++	  struct stat64 fsst;	
++	  if (stat64 (mntbuf.mnt_dir, &fsst) >= 0	
++	      && st.st_dev == fsst.st_dev)	
++	    {	
++	      /* Bingo, we found the entry for the device FD is on.	
++		 Now interpret the option string.  */	
++	      char *cp = mntbuf.mnt_opts;	
++	      char *opt;	
++
++	      while ((opt = __strsep (&cp, ",")) != NULL)	
++		if (strcmp (opt, "ro") == 0)	
++		  result |= ST_RDONLY;	
++		else if (strcmp (opt, "nosuid") == 0)	
++		  result |= ST_NOSUID;	
++		else if (strcmp (opt, "noexec") == 0)	
++		  result |= ST_NOEXEC;	
++		else if (strcmp (opt, "nodev") == 0)	
++		  result |= ST_NODEV;	
++		else if (strcmp (opt, "sync") == 0)	
++		  result |= ST_SYNCHRONOUS;	
++		else if (strcmp (opt, "mand") == 0)	
++		  result |= ST_MANDLOCK;	
++		else if (strcmp (opt, "noatime") == 0)	
++		  result |= ST_NOATIME;	
++		else if (strcmp (opt, "nodiratime") == 0)	
++		  result |= ST_NODIRATIME;	
++		else if (strcmp (opt, "relatime") == 0)	
++		  result |= ST_RELATIME;	
++
++	      /* We can stop looking for more entries.  */	
++	      success = true;	
++	      break;	
++	    }	
++	}	
++      /* Maybe the kernel names for the filesystems changed or the	
++	 statvfs call got a name which was not the mount point.  Check	
++	 again, this time without checking for name matches first.  */	
++      if (! success && (name != NULL || fsname != NULL))	
++	{	
++	  if (name != NULL)	
++	    /* Try without a mount point name.  */	
++	    name = NULL;	
++	  else	
++	    {	
++	      /* Try without a filesystem name.  */	
++	      assert (fsname != NULL);	
++	      fsname = fsname2 = fsname3 = NULL;	
++	    }	
++
++	  /* It is not strictly allowed to use rewind here.  But	
++	     this code is part of the implementation so it is	
++	     acceptable.  */	
++	  rewind (mtab);	
++
++	  goto again;	
++	}	
++
++      /* Close the file.  */	
++      __endmntent (mtab);	
++    }	
++
++  return result;	
++}	
++# endif
++
+ #else
+ extern int __statvfs_getflags (const char *name, int fstype, int fd);
+ #endif
+@@ -83,5 +267,16 @@
+   /* XXX I have no idea how to compute f_favail.  Any idea???  */
+   buf->f_favail = buf->f_ffree;
+ 
++  #ifndef __ASSUME_STATFS_F_FLAGS
++    buf->f_flag = fsbuf->f_flags ^ ST_VALID;
++    if ((fsbuf->f_flags & ST_VALID) == 0)	
++      /* Determining the flags is tricky.  We have to read /proc/mounts or	
++        the /etc/mtab file and search for the entry which matches the given	
++        file.  The way we can test for matching filesystem is using the	
++        device number.  */	
++      buf->f_flag = __statvfs_getflags (name, fsbuf->f_type, fd);	
++    else	
++  #endif
++
+   buf->f_flag = fsbuf->f_flags ^ ST_VALID;
+ }
+--- a/sysdeps/unix/sysv/linux/kernel-features.h
++++ b/sysdeps/unix/sysv/linux/kernel-features.h
+@@ -72,8 +72,21 @@
+ #define __ASSUME_PREADV	1
+ #define __ASSUME_PWRITEV	1
+ 
++/* Support for /proc/self/task/$tid/comm and /proc/$pid/task/$tid/comm was
++   added in 2.6.33.  */
++#if __LINUX_KERNEL_VERSION >= 0x020621
++# define __ASSUME_PROC_PID_TASK_COMM	1
++#endif
++
++/* statfs fills in f_flags since 2.6.36.  */
++#if __LINUX_KERNEL_VERSION >= 0x020624
++# define __ASSUME_STATFS_F_FLAGS	1
++#endif
++
+ /* Support for sendmmsg functionality was added in 3.0.  */
+-#define __ASSUME_SENDMMSG	1
++#if __LINUX_KERNEL_VERSION >= 0x030000
++# define __ASSUME_SENDMMSG	1
++#endif
+ 
+ /* On most architectures, most socket syscalls are supported for all
+    supported kernel versions, but on some socketcall architectures
+@@ -85,8 +98,14 @@
+ #define __ASSUME_RECVFROM_SYSCALL	1
+ #define __ASSUME_SENDTO_SYSCALL		1
+ #define __ASSUME_ACCEPT4_SYSCALL	1
+-#define __ASSUME_RECVMMSG_SYSCALL	1
+-#define __ASSUME_SENDMMSG_SYSCALL	1
++
++#if __LINUX_KERNEL_VERSION >= 0x020621
++# define __ASSUME_RECVMMSG_SYSCALL	1
++#endif
++
++#if __LINUX_KERNEL_VERSION >= 0x030000
++# define __ASSUME_SENDMMSG_SYSCALL	1
++#endif
+ 
+ /* Support for SysV IPC through wired syscalls.  All supported architectures
+    either support ipc syscall and/or all the ipc correspondent syscalls.  */
+--- a/sysdeps/unix/sysv/linux/prlimit.c
++++ b/sysdeps/unix/sysv/linux/prlimit.c
+@@ -19,6 +19,7 @@
+ #include <sys/resource.h>
+ #include <sys/syscall.h>
+ 
++#ifdef __NR_prlimit64
+ 
+ int
+ prlimit (__pid_t pid, enum __rlimit_resource resource,
+@@ -75,3 +76,13 @@
+ 
+   return res;
+ }
++
++#else
++int
++prlimit (__pid_t pid, enum __rlimit_resource resource,
++	 const struct rlimit *new_rlimit, struct rlimit *old_rlimit)
++{
++  return INLINE_SYSCALL_ERROR_RETURN_VALUE (ENOSYS);
++}
++stub_warning (prlimit)
++#endif
+--- a/sysdeps/unix/sysv/linux/recvmmsg.c
++++ b/sysdeps/unix/sysv/linux/recvmmsg.c
+@@ -21,16 +21,66 @@
+ 
+ #include <sysdep-cancel.h>
+ #include <sys/syscall.h>
+-#include <socketcall.h>
+ #include <kernel-features.h>
+ 
++#ifdef __NR_recvmmsg
++
+ int
+ recvmmsg (int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags,
+ 	  struct timespec *tmo)
+ {
+-#ifdef __ASSUME_RECVMMSG_SYSCALL
+   return SYSCALL_CANCEL (recvmmsg, fd, vmessages, vlen, flags, tmo);
+-#else
++}
++#elif defined __NR_socketcall
++# include <socketcall.h>
++# ifdef __ASSUME_RECVMMSG_SOCKETCALL
++int
++recvmmsg (int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags,
++	  struct timespec *tmo)
++{
+   return SOCKETCALL_CANCEL (recvmmsg, fd, vmessages, vlen, flags, tmo);
+-#endif
+ }
++
++# else
++static int have_recvmmsg;
++
++int
++recvmmsg (int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags,
++	  struct timespec *tmo)
++{
++  if (__glibc_likely (have_recvmmsg >= 0))
++    {
++      int ret = SOCKETCALL_CANCEL (recvmmsg, fd, vmessages, vlen, flags,
++				   tmo);
++      /* The kernel returns -EINVAL for unknown socket operations.
++	 We need to convert that error to an ENOSYS error.  */
++      if (__builtin_expect (ret < 0, 0)
++	  && have_recvmmsg == 0
++	  && errno == EINVAL)
++	{
++	  /* Try another call, this time with an invalid file
++	     descriptor and all other parameters cleared.  This call
++	     will not cause any harm and it will return
++	     immediately.  */
++	  ret = SOCKETCALL_CANCEL (invalid, -1);
++	  if (errno == EINVAL)
++	    {
++	      have_recvmmsg = -1;
++	      __set_errno (ENOSYS);
++	    }
++	  else
++	    {
++	      have_recvmmsg = 1;
++	      __set_errno (EINVAL);
++	    }
++	  return -1;
++	}
++      return ret;
++    }
++  __set_errno (ENOSYS);
++  return -1;
++}
++# endif /* __ASSUME_RECVMMSG_SOCKETCALL  */
++#else
++# include <socket/recvmmsg.c>
++#endif
+--- a/sysdeps/unix/sysv/linux/sendmmsg.c
++++ b/sysdeps/unix/sysv/linux/sendmmsg.c
+@@ -21,17 +21,68 @@
+ 
+ #include <sysdep-cancel.h>
+ #include <sys/syscall.h>
+-#include <socketcall.h>
+ #include <kernel-features.h>
+ 
++#ifdef __NR_sendmmsg
++
++int
++__sendmmsg (int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
++{
++return SYSCALL_CANCEL (sendmmsg, fd, vmessages, vlen, flags);
++}
++libc_hidden_def (__sendmmsg)
++weak_alias (__sendmmsg, sendmmsg)
++#elif defined __NR_socketcall
++# include <socketcall.h>
++# ifdef __ASSUME_SENDMMSG_SOCKETCALL
+ int
+ __sendmmsg (int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
+ {
+-#ifdef __ASSUME_SENDMMSG_SYSCALL
+-  return SYSCALL_CANCEL (sendmmsg, fd, vmessages, vlen, flags);
+-#else
+   return SOCKETCALL_CANCEL (sendmmsg, fd, vmessages, vlen, flags);
+-#endif
+ }
++
++# else
++static int have_sendmmsg;
++
++int
++__sendmmsg (int fd, struct mmsghdr *vmessages, unsigned int vlen, int flags)
++{
++  if (__glibc_likely (have_sendmmsg >= 0))
++    {
++      int ret = SOCKETCALL_CANCEL (sendmmsg, fd, vmessages, vlen, flags);
++      /* The kernel returns -EINVAL for unknown socket operations.
++	 We need to convert that error to an ENOSYS error.  */
++      if (__builtin_expect (ret < 0, 0)
++	  && have_sendmmsg == 0
++	  && errno == EINVAL)
++	{
++	  /* Try another call, this time with an invalid file
++	     descriptor and all other parameters cleared.  This call
++	     will not cause any harm and it will return
++	     immediately.  */
++	  ret = SOCKETCALL_CANCEL (invalid, -1);
++	  if (errno == EINVAL)
++	    {
++	      have_sendmmsg = -1;
++	      __set_errno (ENOSYS);
++	    }
++	  else
++	    {
++	      have_sendmmsg = 1;
++	      __set_errno (EINVAL);
++	    }
++	  return -1;
++	}
++      return ret;
++    }
++  __set_errno (ENOSYS);
++  return -1;
++}
++# endif /* __ASSUME_SENDMMSG_SOCKETCALL  */
++
+ libc_hidden_def (__sendmmsg)
+ weak_alias (__sendmmsg, sendmmsg)
++
++#else
++# include <socket/sendmmsg.c>
++#endif
+--- a/sysdeps/unix/sysv/linux/setrlimit.c
++++ b/sysdeps/unix/sysv/linux/setrlimit.c
+@@ -34,6 +34,9 @@
+ int
+ __setrlimit (enum __rlimit_resource resource, const struct rlimit *rlim)
+ {
++
++# ifdef __NR_prlimit64
++
+   struct rlimit64 rlim64;
+ 
+   if (rlim->rlim_cur == RLIM_INFINITY)
+@@ -45,7 +48,11 @@
+   else
+     rlim64.rlim_max = rlim->rlim_max;
+ 
+-  return INLINE_SYSCALL_CALL (prlimit64, 0, resource, &rlim64, NULL);
++  int res = INLINE_SYSCALL_CALL (prlimit64, 0, resource, &rlim64, NULL);
++  if (res == 0 || errno != ENOSYS)	
++    return res;	
++# endif
++  return INLINE_SYSCALL_CALL (setrlimit, resource, rlim);
+ }
+ 
+ libc_hidden_def (__setrlimit)
+--- a/sysdeps/unix/sysv/linux/setrlimit64.c
++++ b/sysdeps/unix/sysv/linux/setrlimit64.c
+@@ -1,17 +1,17 @@
+ /* Linux setrlimit64 implementation (64 bits off_t).
+    Copyright (C) 2010-2018 Free Software Foundation, Inc.
+    This file is part of the GNU C Library.
+-
++   
+    The GNU C Library is free software; you can redistribute it and/or
+    modify it under the terms of the GNU Lesser General Public
+    License as published by the Free Software Foundation; either
+    version 2.1 of the License, or (at your option) any later version.
+-
++   
+    The GNU C Library is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+    Lesser General Public License for more details.
+-
++   
+    You should have received a copy of the GNU Lesser General Public
+    License along with the GNU C Library; if not, see
+    <http://www.gnu.org/licenses/>.  */
+@@ -36,7 +36,36 @@
+ int
+ __setrlimit64 (enum __rlimit_resource resource, const struct rlimit64 *rlimits)
+ {
+-  return INLINE_SYSCALL_CALL (prlimit64, 0, resource, rlimits, NULL);
++  int res;
++
++#ifdef __NR_prlimit64
++  res = INLINE_SYSCALL_CALL (prlimit64, 0, resource, rlimits, NULL);
++  if (res == 0 || errno != ENOSYS)
++    return res;
++#endif
++
++/* The fallback code only makes sense if the platform supports
++   __NR_setrlimit.  */
++#ifdef __NR_setrlimit
++# if !__RLIM_T_MATCHES_RLIM64_T
++  struct rlimit rlimits32;
++
++  if (rlimits->rlim_cur >= RLIM_INFINITY)
++    rlimits32.rlim_cur = RLIM_INFINITY;
++  else
++    rlimits32.rlim_cur = rlimits->rlim_cur;
++  if (rlimits->rlim_max >= RLIM_INFINITY)
++    rlimits32.rlim_max = RLIM_INFINITY;
++  else
++    rlimits32.rlim_max = rlimits->rlim_max;
++# else
++#  define rlimits32 (*rlimits)
++# endif
++
++  res = INLINE_SYSCALL_CALL (setrlimit, resource, &rlimits32);
++#endif
++
++  return res;
+ }
+ /* Alpha defines a versioned setrlimit{64}.  */
+ #ifndef USE_VERSIONED_RLIMIT
+--- a/sysdeps/unix/sysv/linux/tst-setgetname.c
++++ b/sysdeps/unix/sysv/linux/tst-setgetname.c
+@@ -23,6 +23,7 @@
+ #include <unistd.h>
+ #include <fcntl.h>
+ #include <errno.h>
++#include <kernel-features.h>
+ 
+ /* New name of process.  */
+ #define NEW_NAME "setname"
+@@ -100,6 +101,18 @@
+     {
+       res = get_self_comm (gettid (), name_check, TASK_COMM_LEN);
+ 
++      #ifndef __ASSUME_PROC_PID_TASK_COMM	
++          /* On this first test we look for ENOENT to be returned from	
++            get_self_comm to indicate that the kernel is older than	
++            2.6.33 and doesn't contain comm within the proc structure.	
++            In that case we skip the entire test.  */	
++          if (res == ENOENT)	
++          {	
++            printf ("SKIP: The kernel does not have /proc/self/task/%%lu/comm.\n");	
++            return 0;	
++          }	
++      #endif
++
+       if (res == 0)
+        {
+          if (strncmp (name, name_check, strlen (BIG_NAME)) == 0)

@@ -146,7 +146,7 @@ then
         case ${DPKG_MAINTSCRIPT_ARCH:-$(dpkg --print-architecture)} in
             *)
                 # The GNU libc requires a >= 3.2 kernel, found in wheezy
-                kernel_ver_min=3.2
+                kernel_ver_min=2.6.32
                 kernel_ver_rec=3.2
                 ;;
         esac

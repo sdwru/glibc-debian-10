@@ -72,21 +72,8 @@
 #define __ASSUME_PREADV	1
 #define __ASSUME_PWRITEV	1
 
-/* Support for /proc/self/task/$tid/comm and /proc/$pid/task/$tid/comm was
-   added in 2.6.33.  */
-#if __LINUX_KERNEL_VERSION >= 0x020621
-# define __ASSUME_PROC_PID_TASK_COMM	1
-#endif
-
-/* statfs fills in f_flags since 2.6.36.  */
-#if __LINUX_KERNEL_VERSION >= 0x020624
-# define __ASSUME_STATFS_F_FLAGS	1
-#endif
-
 /* Support for sendmmsg functionality was added in 3.0.  */
-#if __LINUX_KERNEL_VERSION >= 0x030000
-# define __ASSUME_SENDMMSG	1
-#endif
+#define __ASSUME_SENDMMSG	1
 
 /* On most architectures, most socket syscalls are supported for all
    supported kernel versions, but on some socketcall architectures
@@ -98,14 +85,8 @@
 #define __ASSUME_RECVFROM_SYSCALL	1
 #define __ASSUME_SENDTO_SYSCALL		1
 #define __ASSUME_ACCEPT4_SYSCALL	1
-
-#if __LINUX_KERNEL_VERSION >= 0x020621
-# define __ASSUME_RECVMMSG_SYSCALL	1
-#endif
-
-#if __LINUX_KERNEL_VERSION >= 0x030000
-# define __ASSUME_SENDMMSG_SYSCALL	1
-#endif
+#define __ASSUME_RECVMMSG_SYSCALL	1
+#define __ASSUME_SENDMMSG_SYSCALL	1
 
 /* Support for SysV IPC through wired syscalls.  All supported architectures
    either support ipc syscall and/or all the ipc correspondent syscalls.  */

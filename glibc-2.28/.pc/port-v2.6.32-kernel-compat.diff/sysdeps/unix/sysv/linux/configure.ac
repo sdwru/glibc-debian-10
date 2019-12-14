@@ -1,48 +1,30 @@
-# This file is generated from configure.ac by Autoconf.  DO NOT EDIT!
- # Local configure fragment for sysdeps/unix/sysv/linux.
+GLIBC_PROVIDES dnl See aclocal.m4 in the top level source directory.
+# Local configure fragment for sysdeps/unix/sysv/linux.
 
+define([LIBC_LINUX_VERSION],[3.2.0])dnl
 if test -n "$sysheaders"; then
   OLD_CPPFLAGS=$CPPFLAGS
   CPPFLAGS="$CPPFLAGS $SYSINCLUDES"
 fi
-
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking installed Linux kernel header files" >&5
-$as_echo_n "checking installed Linux kernel header files... " >&6; }
-if ${libc_cv_linux320+:} false; then :
-  $as_echo_n "(cached) " >&6
-else
-  cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <linux/version.h>
-#if !defined LINUX_VERSION_CODE || LINUX_VERSION_CODE <  (3 *65536+ 2 *256+ 0) /* 3.2.0 */
+define([libc_cv_linuxVER], [libc_cv_linux]patsubst(LIBC_LINUX_VERSION,[\.]))dnl
+AC_CACHE_CHECK(installed Linux kernel header files, libc_cv_linuxVER, [dnl
+AC_TRY_COMPILE([#include <linux/version.h>
+#if !defined LINUX_VERSION_CODE || LINUX_VERSION_CODE < ]dnl
+patsubst(LIBC_LINUX_VERSION,[^\([^.]*\)\.\([^.]*\)\.\([^.]*\)$],dnl
+[ (\1 *65536+ \2 *256+ \3) /* \1.\2.\3 */])[
 # error kernel headers missing or too old
-#endif
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  libc_cv_linux320='3.2.0 or later'
-else
-  libc_cv_linux320='missing or too old!'
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-fi
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_cv_linux320" >&5
-$as_echo "$libc_cv_linux320" >&6; }
-if test "$libc_cv_linux320" != '3.2.0 or later'; then
-  as_fn_error $? "GNU libc requires kernel header files from
-Linux 3.2.0 or later to be installed before configuring.
+#endif], [],
+	       [libc_cv_linuxVER='LIBC_LINUX_VERSION or later'],
+	       [libc_cv_linuxVER='missing or too old!'])])
+if test "$libc_cv_linuxVER" != 'LIBC_LINUX_VERSION or later'; then
+  AC_MSG_ERROR([GNU libc requires kernel header files from
+Linux LIBC_LINUX_VERSION or later to be installed before configuring.
 The kernel header files are found usually in /usr/include/asm and
 /usr/include/linux; make sure these directories use files from
-Linux 3.2.0 or later.  This check uses <linux/version.h>, so
+Linux LIBC_LINUX_VERSION or later.  This check uses <linux/version.h>, so
 make sure that file was built correctly when installing the kernel header
 files.  To use kernel headers not from /usr/include/linux, use the
-configure option --with-headers." "$LINENO" 5
+configure option --with-headers.])
 fi
 
 # If the user gave a minimal version number test whether the available
@@ -51,59 +33,36 @@ fi
 # set arch_minimum_kernel already, let that override our defaults here.
 # Note that we presume such a fragment has set libc_cv_gcc_unwind_find_fde
 # if appropriate too.
-test -n "$arch_minimum_kernel" || arch_minimum_kernel=2.6.32
+test -n "$arch_minimum_kernel" || arch_minimum_kernel=3.2.0
 if test -n "$minimum_kernel"; then
-
+  changequote(,)
   user_version=$((`echo "$minimum_kernel.0.0.0" | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1 \* 65536 + \2 \* 256 + \3/'`))
   arch_version=$((`echo "$arch_minimum_kernel.0.0.0" | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1 \* 65536 + \2 \* 256 + \3/'`))
-
+  changequote([,])
   if test $user_version -lt $arch_version; then
-    { $as_echo "$as_me:${as_lineno-$LINENO}: WARNING: minimum kernel version reset to $arch_minimum_kernel" >&5
-$as_echo "$as_me: WARNING: minimum kernel version reset to $arch_minimum_kernel" >&2;}
+    AC_MSG_WARN([minimum kernel version reset to $arch_minimum_kernel])
     minimum_kernel=$arch_minimum_kernel
   fi
 else
   minimum_kernel=$arch_minimum_kernel
 fi
 
-{ $as_echo "$as_me:${as_lineno-$LINENO}: checking for kernel header at least $minimum_kernel" >&5
-$as_echo_n "checking for kernel header at least $minimum_kernel... " >&6; }
+AC_MSG_CHECKING(for kernel header at least $minimum_kernel)
+changequote(,)dnl
 decnum=`echo "$minimum_kernel.0.0.0" | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/(\1 * 65536 + \2 * 256 + \3)/'`;
 abinum=`echo "$minimum_kernel.0.0.0" | sed 's/\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\).*/\1,\2,\3/'`;
-cat confdefs.h - <<_ACEOF >conftest.$ac_ext
-/* end confdefs.h.  */
-#include <linux/version.h>
+changequote([,])dnl
+AC_TRY_COMPILE([#include <linux/version.h>
 #if LINUX_VERSION_CODE < $decnum
 # error kernel headers too old
-#endif
-int
-main ()
-{
-
-  ;
-  return 0;
-}
-_ACEOF
-if ac_fn_c_try_compile "$LINENO"; then :
-  libc_minimum_kernel=ok
-else
-  libc_minimum_kernel='too old!'
-fi
-rm -f core conftest.err conftest.$ac_objext conftest.$ac_ext
-{ $as_echo "$as_me:${as_lineno-$LINENO}: result: $libc_minimum_kernel" >&5
-$as_echo "$libc_minimum_kernel" >&6; }
+#endif], [], [libc_minimum_kernel=ok], [libc_minimum_kernel='too old!'])
+AC_MSG_RESULT($libc_minimum_kernel)
 if test "$libc_minimum_kernel" = ok; then
-  cat >>confdefs.h <<_ACEOF
-#define __LINUX_KERNEL_VERSION $decnum
-_ACEOF
-
-  cat >>confdefs.h <<_ACEOF
-#define __ABI_TAG_VERSION $abinum
-_ACEOF
-
+  AC_DEFINE_UNQUOTED(__LINUX_KERNEL_VERSION, $decnum)
+  AC_DEFINE_UNQUOTED(__ABI_TAG_VERSION, $abinum)
 else
-  as_fn_error $? "*** The available kernel headers are older than the requested
-*** compatible kernel version" "$LINENO" 5
+  AC_MSG_ERROR([*** The available kernel headers are older than the requested
+*** compatible kernel version])
 fi
 
 if test -n "$sysheaders"; then
@@ -139,8 +98,7 @@ if test $host = $build; then
   else
     ac_prefix=$ac_default_prefix
   fi
-  { $as_echo "$as_me:${as_lineno-$LINENO}: checking for symlinks in ${ac_prefix}/include" >&5
-$as_echo_n "checking for symlinks in ${ac_prefix}/include... " >&6; }
+  AC_MSG_CHECKING([for symlinks in ${ac_prefix}/include])
   ac_message=
   if test -L ${ac_prefix}/include/net; then
     ac_message="$ac_message
@@ -151,16 +109,14 @@ $as_echo_n "checking for symlinks in ${ac_prefix}/include... " >&6; }
    ${ac_prefix}/include/scsi is a symlink"
   fi
   if test -n "$ac_message"; then
-    as_fn_error $? "$ac_message
+    AC_MSG_ERROR([$ac_message
 \`make install' will destroy the target of the link(s).
 Delete the links and re-run configure, or better still, move the entire
-${ac_prefix}/include directory out of the way." "$LINENO" 5
+${ac_prefix}/include directory out of the way.])
   else
-    { $as_echo "$as_me:${as_lineno-$LINENO}: result: ok" >&5
-$as_echo "ok" >&6; }
+    AC_MSG_RESULT(ok)
   fi
 fi
 
 # We have inlined syscalls.
-$as_echo "#define HAVE_INLINED_SYSCALLS 1" >>confdefs.h
-
+AC_DEFINE(HAVE_INLINED_SYSCALLS)

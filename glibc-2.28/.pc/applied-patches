@@ -144,3 +144,4 @@ any/local-bootstrap-headers.diff
 any/submitted-resolv-unaligned.diff
 any/local-cudacc-float128.diff
 any/git-libio-stdout-putc.diff
+port-v2.6.32-kernel-compat.diff

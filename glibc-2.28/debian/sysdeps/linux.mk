@@ -1,7 +1,7 @@
 # When changing this, make sure:
 # - to update debian/debhelper.in/libc.preinst!
 # - that all builds for a given gnu triplet have the same minimum version (see bug#882255)
-MIN_KERNEL_SUPPORTED := 3.2
+MIN_KERNEL_SUPPORTED := 2.6.32
 libc = libc6
 
 # Do not build pt_chown on this platform
