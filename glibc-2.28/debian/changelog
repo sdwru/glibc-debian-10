@@ -2,6 +2,7 @@ glibc (2.28-9910.0+custom1~1) UNRELEASED; urgency=medium
 
   * debian/patches/port-v2.6.32-kernel-compat.diff
   * Updated debian specific kernel compat files
+  * https://github.com/sdwru/glibc-debian-10/releases
 
  -- root <root@debdev1.debdev1.local>  Tue, 10 Dec 2019 08:56:37 -0800
 
